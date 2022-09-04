@@ -76,8 +76,6 @@ def sort_DB():
         pass
     count = 1
     rows = list()
-    print(element)
-    print(date)
     for i in element:
         for j in date:
             if j[1] == i:
@@ -120,9 +118,48 @@ def get_database_invoice():
     else:
         return None
 
+def get_individual_invoice():
+    con = sqlite3.connect(LINK_DATABASE)
+    cursor = con.cursor()
+    rowsQuery = "SELECT Count() FROM invoice"
+    cursor.execute(rowsQuery)
+    elementAll = cursor.fetchone()[0]
+    rowsQuery = "SELECT * FROM invoice"
+    if elementAll >= 1:
+        cursor.execute(rowsQuery)
+        rows = cursor.fetchall()
+        return rows
+
+def data_invoice_month(row,canceled):
+    date = dict()
+    for i in row:
+        if i[1] in canceled:
+            pass
+        else:
+            mult = 0
+            if i[4] == 'TRUE':
+                mult = 0.075
+            if not i[3][0:3]+i[3][-4:len(i[3])] in date:
+                date[i[3][0:3]+i[3][-4:len(i[3])]] = {1:round(i[2]/(1+mult),2),2:1}
+            else:
+                date[i[3][0:3]+i[3][-4:len(i[3])]][1] = round(round(i[2]/(1+mult),2) + date[i[3][0:3]+i[3][-4:len(i[3])]][1],2)
+                date[i[3][0:3]+i[3][-4:len(i[3])]][2] += 1
+    if date:
+        ventas_por_mes = list()
+        mes = list()
+        cant_inv = list()
+        for i in date:
+            mes.append(i)
+            ventas_por_mes.append(date[i][1])
+            cant_inv.append(date[i][2])
+        return ventas_por_mes,mes,cant_inv
+    else:
+        return None, None, None
+
 def get_data_database():
     rows = get_database_invoice()
     if rows:
+        f = get_individual_invoice()
         pay = 0
         no_pay = 0
         total_mon = 0
@@ -130,6 +167,7 @@ def get_data_database():
         msg_no_cob = list()
         msg = list()
         elementAll = len(rows)
+        canceled = list()
         for row in rows:
             if ((row[15] == 1) and (row[17] != 'TRUE')):
                 pay += 1
@@ -143,9 +181,21 @@ def get_data_database():
                 msg.append((row[0],"Pending Charged"))
             else:
                 msg.append((row[0],"Invoice Canceled"))
-        return elementAll,no_pay,pay,no_pay/(pay+no_pay)*100,total_mon,total_pen,msg,msg_no_cob
+                if not row[0] in canceled:
+                    canceled.append(row[0])
+        gan,mes,ci = data_invoice_month(f,canceled)
+        return elementAll,no_pay,pay,no_pay/(pay+no_pay)*100,total_mon,total_pen,msg,msg_no_cob,[gan,ci,mes]
     else:        
-        return 0,0,0,0,0,0,None,None
+        return 0,0,0,0,0,0,None,None,None
+
+def insert_individual(a,b,c):
+    con = sqlite3.connect(LINK_DATABASE)
+    cursorObj = con.cursor()
+    value = str(a) + ',' + str(b) + ',\'' + datetime.today().strftime('%m/%d/%Y') + '\',' + '\'' + c + '\''    
+    sql_sintaxis = """INSERT INTO invoice (number_invoice,pay,fecha,tax) VALUES({})""".format(value)
+    cursorObj.execute(sql_sintaxis)
+    con.commit()
+    con.close()
 
 def insert_date(a,b,c,d):
     con = sqlite3.connect(LINK_DATABASE)
@@ -221,6 +271,7 @@ def parser_date(date,new_invoice):
     work_contract = {1:False,2:False,3:False,4:False,5:False,6:False,7:False,8:False,9:False,10:False,
 11:False,12:False,13:False,14:False,15:False,16:False,17:False,18:False,19:False,20:False,21:False,22:False}
     money = {1:0,2:True,3:2}
+    TAX = 'TRUE'
     for i in date:
         if i in list_client:
             if date.get(i)!='':
@@ -237,12 +288,16 @@ def parser_date(date,new_invoice):
                 money[1] = float(date.get(i))
             elif i == 'cash':
                 money[2] = False
+                TAX = 'FALSE'
             elif i == 'deposito':
                 money[3] = float(date.get(i))
     if new_invoice == True:
+        a = get_number_invoice()
         insert_date(date_client,money,work_contract,comment)
     else:
+        a = date.get('numero_invoice')
         update_date(date.get('numero_invoice'),money)
+    insert_individual(a,money[3],TAX)
     date_client['address'] = '{},{},{}'.format(date_client['street'],date_client['city'],date_client['cp'])
     del date_client['street']
     del date_client['city']
@@ -382,8 +437,8 @@ def find():
     
 @app.route('/dashboard')    
 def dashboard():
-    a,b,c,d,e,g,msg,msg_no_cob = get_data_database()
-    return render_template("datos.html",total=a,pending=b,complete=c,porc=round(d,2),tot_mon=e,pend_mon=g,msg_no_cob=msg_no_cob,msg=msg)
+    a,b,c,d,e,g,msg,msg_no_cob,info = get_data_database()
+    return render_template("datos.html",total=a,pending=b,complete=c,porc=round(d,2),tot_mon=e,pend_mon=g,msg_no_cob=msg_no_cob,msg=msg,info=info)
 
 @app.route("/invoice", methods=['GET','POST'])
 def invoice():
