@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>FlaskApp</title>
+    <style>
+        nav a {
+            color: #008f61;
+            font-size: 3em;
+            margin-left: 50px;
+            text-decoration: none;
+        }
+		footer {
+        position: fixed;
+		margin-bottom: 30px;
+        bottom:0; 
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="{{ url_for('estimation') }}">Quotation</a>
+		<a href="{{ url_for('invoice') }}">Billing</a>
+		<!--<a>Billing</a>-->
+        <a href="{{ url_for('company') }}">Date Company</a>
+    </nav>
+    <hr>
+    <div class="content">
+	    <div style="width: 70%; margin: auto">
+	        <div style="padding: 10px; background-color: #EEE; margin: 20px">
+	           <h1>Python-based Administration System for Small Businesses</h1>
+	        </div>
+	    </div>
+		<div style="width: 75%; margin: auto">		
+           <img src="{{url_for('static', filename='visual.jpg')}}" style="width: 80%">
+		</div>
+    </div>
+</body>
+<footer>&copy; Copyright 2022. ALL RIGHT RESERVED</footer>
+</html>
