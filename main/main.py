@@ -52,6 +52,7 @@ def remove_elemt_request(reQ):
     except:
         pass
     del adds['fname']
+    del adds['aditional']
     temp = dict()
     for i in adds:
         if adds[i] == '0' or adds[i] == '':            
@@ -357,6 +358,7 @@ def estimation():
     if request.method == 'POST':
         adds = remove_elemt_request(request.form)
         name = request.form.get('fname')
+        comment = request.form.get('aditional')
         data_expande = list()
         for i in adds:
             data_expande.append(data_raw(i)[0]+tuple([int(adds[i])]))
@@ -373,7 +375,7 @@ def estimation():
                 total += i[3]*i[4]
             else: 
                 total += i[3]             
-        return render_template("estimation.html", materiales = rows, nombre=name, add_element = data_expande, total = total)
+        return render_template("estimation.html", materiales = rows, nombre=name,description = comment, add_element = data_expande, total = total)
 
 @app.route('/quote', methods=['GET','POST'])
 def quote(): 
@@ -505,5 +507,5 @@ def delete():
 ###############################################################################################################
     
 if __name__ == "__main__":
-    #app.run(debug=True)
-    serve(app, host='0.0.0.0', port=8080, threads=1) #WAITRESS!
+    app.run(debug=True)
+    #serve(app, host='0.0.0.0', port=8080, threads=1) #WAITRESS!
