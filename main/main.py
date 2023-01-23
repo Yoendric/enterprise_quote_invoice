@@ -347,165 +347,27 @@ app = Flask(__name__)
 ################### PRINCIPAL #######################################################
 @app.route("/", methods=['GET', 'POST'])
 def index():
-    return render_template("index.html")
-#####################################################################################
-################### QUOTE ###########################################################
-@app.route("/estimation", methods=['GET', 'POST'])
-def estimation():
-    rows = fecth_raw()
-    if request.method == 'GET':  
-        return render_template("estimation.html", materiales = rows)
-    if request.method == 'POST':
-        adds = remove_elemt_request(request.form)
-        name = request.form.get('fname')
-        comment = request.form.get('aditional')
-        data_expande = list()
-        for i in adds:
-            data_expande.append(data_raw(i)[0]+tuple([int(adds[i])]))
-        if request.form.get('raw'):
-            filter_mat = [data_raw(request.form.get('raw'))[0]+tuple([None])]
-            if request.form.get('raw') in adds:
-                #pag.alert(text="Item already selected", title="Warning")
-                pass
-            else:
-                data_expande.append(filter_mat[0]) 
-        total = 0
-        for i in data_expande:
-            if i[4]:
-                total += i[3]*i[4]
-            else: 
-                total += i[3]             
-        return render_template("estimation.html", materiales = rows, nombre=name,description = comment, add_element = data_expande, total = total)
+    return """    <style>
+        section{text-align: center;}
+        #maintable{width: 80%; text-align: center;margin: auto 10%;}
+        .mitabla{width: 100%; padding:20px;}
+        .mitabla thead{background-color: gray;}
+        .mitabla tfoot{background-color: antiquewhite;}
+    </style>
+<form>	
+    <section>
+        <div>
+            <h1>Software update required</h1>
+        </div>
+		<p>Keeping your Python environment up-to-date is a vital part of the 
+		development process, yet it's often the most overlooked due to cost, 
+		time, and sometimes a general fear of what might break. However, 
+		your favorite version of Python has a shelf-life.</p>
+    </section>
+</form>
+    """
 
-@app.route('/quote', methods=['GET','POST'])
-def quote(): 
-    if request.form.get('fname'):
-        pdf=dict(request.form)
-        if 'raw' in pdf:
-            del pdf['raw']
-        rows = company_database()
-        company_data = [rows[0][1],rows[0][2],rows[0][4]+', '+rows[0][5]+' '+rows[0][3],rows[0][6],rows[0][7]]
-        generate_quote_pdf(pdf,data_raw,company_data)
-        return render_template("quote.html",nombre=request.form.get('fname'))
-    else:
-        return """{"Error":"NO Name in yo quote"}"""
-        
-@app.route('/materials', methods=['GET','POST'])
-def materials():
-    if request.method == 'POST':
-        if request.form.get('submit_button'):
-            if request.form['submit_button'] == 'add':
-                if (request.form.get('name_item') and request.form.get('unit_item') and request.form.get('cost_item')):
-                    sql_string = """INSERT INTO materials VALUES ({0},"{1}","{2}",{3})""".format(new_id(),request.form.get('name_item'),
-                                      request.form.get('unit_item'),request.form.get('cost_item'))  
-                    insert_materials(sql_string)
-                    sort_DB()                    
-            if request.form['submit_button'] == 'delete':                    
-                if request.form.get('delete'): 
-                    if 'confirmacion' in dict(request.form): 
-                        delete_materials(request.form.get('delete'))
-                        sort_DB()
-            if  request.form['submit_button'] == 'update': 
-                if request.form.get('update'): 
-                    if 'confirmacion_update' in dict(request.form):  
-                        update = data_raw(request.form.get('update'))
-                        return render_template("database.html", row=update, page_principal = False)                        
-                else:
-                    if (request.form.get('id') and request.form.get('name_item') and request.form.get('unit_item') and request.form.get('cost_item')):
-                        sql_string =""" UPDATE materials SET element="{}",medida="{}",prize={} WHERE id={}""".format(request.form.get('name_item'),
-                                                  request.form.get('unit_item'),request.form.get('cost_item'),request.form.get('id')) 
-                        insert_materials(sql_string)  
-                        sort_DB()                        
-    rows = fecth_raw()
-    return render_template("database.html", row=rows, page_principal = True)
-################################################################################################################
-########################### COMPANY DATE #######################################################################
-@app.route('/company', methods=['GET','POST'])
-def company(): 
-    rows = None
-    if (request.method == 'POST'):
-        sql_string = """UPDATE company SET name="{}",address="{}",zipcode="{}",city="{}",estado="{}",phone="{}",email="{}" WHERE id=1""".format(request.form.get('name_company'),
-                           request.form.get('address_company'),request.form.get('zip'),request.form.get('city_company'),request.form.get('estado'),
-                           "+1"+request.form.get('phone'),request.form.get('email'))
-        insert_materials(sql_string)
-    rows = company_database()
-    return render_template("company.html", data = rows[0])
-
-###############################################################################################################
-########################### INVOICE ###########################################################################
-@app.route('/find', methods=['GET','POST'])    
-def find():
-    return render_template("find.html")
-    
-@app.route('/dashboard')    
-def dashboard():
-    a,b,c,d,e,g,msg,msg_no_cob,info = get_data_database()
-    return render_template("datos.html",total=a,pending=b,complete=c,porc=round(d,2),tot_mon=e,pend_mon=g,msg_no_cob=msg_no_cob,msg=msg,info=info)
-
-@app.route("/invoice", methods=['GET','POST'])
-def invoice():
-    if request.method == 'GET':
-        return render_template("invoice.html")
-    if request.method == 'POST':
-        if request.form:
-            date_fact = find_datos(request.form)
-            if date_fact:
-                date_fact = ['' if x==None else x for x in date_fact]
-                if date_fact[15] == 1:
-                    texto="Invoices Payment Complete"
-                    return render_template("mostrar.html",text=texto, nombre=request.form.get('name'), number = request.form.get('Invoice').zfill(4))
-                check_his = list()
-                for i in list(date_fact[11]):
-                    if i == '1':
-                        check_his.append('checked')
-                    else:
-                        check_his.append('')
-                return render_template("refacturar.html", number = date_fact[0],name=date_fact[1],
-                last=date_fact[2],phone=date_fact[3],email=date_fact[4],
-                street=date_fact[5],city=date_fact[6],cp=date_fact[7],
-                boat=date_fact[8],feet=date_fact[9],vin=date_fact[10],
-                comment=date_fact[12],pending=date_fact[14],check=check_his)
-            else:
-                texto="Invoices no Found or not Exist"
-                return render_template("mostrar.html",text=texto, nombre=request.form.get('name'), number = request.form.get('Invoice').zfill(4))
-        else:
-            return render_template("invoice.html")
-
-@app.route('/procesar', methods=['POST'])
-def procesar():
-    number_invoice = request.form.get("numero_invoice")
-    if number_invoice == None:
-        number_invoice = get_number_invoice()
-        new_invoice = True
-    else:
-        number_invoice = int(number_invoice)
-        new_invoice = False
-    date_client,work_contract,money,comment = parser_date(request.form, new_invoice)
-    if comment:
-        aditional = split_text_note(comment)
-    else:
-        aditional = comment
-    rows = company_database()
-    company_data = [rows[0][1],rows[0][2],rows[0][4]+', '+rows[0][5]+' '+rows[0][3],rows[0][6],rows[0][7]]
-    generate_invoice_pdf(number_invoice,date_client,work_contract,aditional,money,company_data)
-    #webbrowser.open_new(r'file://C:\Users\DELL\Desktop\Eduyn\Invoice\flask_invoice\invoice\invoice_{}_fecha_{}.pdf'.format(str(number_invoice).zfill(4),datetime.today().strftime('%m_%d_%Y_%H_%M')))
-    nombre = request.form.get("name") +' '+request.form.get("last")
-    texto = "Invoices Generated and Date Client Save OK"
-    return render_template("mostrar.html", text =texto, nombre=nombre, number=str(number_invoice).zfill(4))     
-
-@app.route('/delete', methods=['GET','POST'])
-def delete():
-    invoices = find_invoice_no_canceled() 
-    mensaje = None    
-    if request.method == 'POST':
-        if request.form.get('cancel'): 
-            sql_sintaxis = """UPDATE customer SET cancel = 'TRUE' where id = {}""".format(request.form.get('cancel'))  
-            insert_materials(sql_sintaxis)            
-            mensaje = "Successful invoice cancellation # "+str(request.form.get('cancel'))
-            invoices = find_invoice_no_canceled() 
-    return render_template("delete.html", msg = mensaje, invoices = invoices) 
 ###############################################################################################################
     
 if __name__ == "__main__":
-    #app.run(debug=True)
     serve(app, host='0.0.0.0', port=8080, threads=1) #WAITRESS!
